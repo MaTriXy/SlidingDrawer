@@ -13,54 +13,58 @@ The size of the SlidingDrawer defines how much space the content will occupy onc
 [More](http://developer.android.com/reference/android/widget/SlidingDrawer.html) :)
 
 
-Setup
------
-
-Add this to your dependencies:
+## Setup
 
 ```
 dependencies {
-    
-    compile 'com.github.moraisigor:slidingdrawer:1.5.7'
+
+    implementation 'com.github.moraisigor:slidingdrawer:1.6.7'
 }
 ```
 
 
-Example
--------
+## Example
 
 ##### In Layout
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              xmlns:drawer="http://schemas.android.com/apk/res-auto"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent">
-
+    xmlns:layout="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f1582a">
+    
     <hollowsoft.slidingdrawer.SlidingDrawer
         android:id="@+id/drawer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        drawer:handle="@+id/handle"
-        drawer:content="@+id/content">
+        layout:content="@+id/content"
+        layout:handle="@+id/handle">
         
         <TextView
-            android:id="@+id/handle"
+            android:id="@id/handle"
             android:layout_width="match_parent"
             android:layout_height="75dp"
-            android:background="#01579B"
+            android:background="#122631"
             android:gravity="center"
-            android:text="Handle"/>
+            android:text="Handle"
+            android:textAllCaps="true"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:textStyle="bold" />
             
         <TextView
             android:id="@+id/content"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#00ACC1"
             android:gravity="center"
-            android:text="Content"/>
-    
+            android:text="Content"
+            android:textAllCaps="true"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+            
     </hollowsoft.slidingdrawer.SlidingDrawer>
     
 </LinearLayout>
@@ -69,7 +73,7 @@ Example
 ##### In Code
 
 ```java
-public class MainActivity extends Activity implements OnDrawerScrollListener, OnDrawerOpenListener, OnDrawerCloseListener {
+public final class MainActivity extends AppCompatActivity implements OnDrawerScrollListener, OnDrawerOpenListener, OnDrawerCloseListener {
                                                 
     private static final String TAG = MainActivity.class.getSimpleName();
     
@@ -80,49 +84,43 @@ public class MainActivity extends Activity implements OnDrawerScrollListener, On
         setContentView(R.layout.main);
         
         final SlidingDrawer drawer = (SlidingDrawer) findViewById(R.id.drawer);
-        
+
         drawer.setOnDrawerScrollListener(this);
         drawer.setOnDrawerOpenListener(this);
         drawer.setOnDrawerCloseListener(this);
     }
     
     @Override
-    public void onDrawerOpened() {
-        Log.i(TAG, "Drawer Opened");
-    }
-    
-    @Override
-    public void onDrawerClosed() {
-        Log.i(TAG, "Drawer Closed");
-    }
-    
-    @Override
     public void onScrollStarted() {
-        Log.i(TAG, "Scroll Started");
+        Log.d(TAG, "onScrollStarted()");
     }
-    
+
     @Override
     public void onScrollEnded() {
-        Log.i(TAG, "Scroll Ended");
+        Log.d(TAG, "onScrollEnded()");
+    }
+
+    @Override
+    public void onDrawerOpened() {
+        Log.d(TAG, "onDrawerOpened()");
+    }
+
+    @Override
+    public void onDrawerClosed() {
+        Log.d(TAG, "onDrawerClosed()");
     }
 }
 ```
 
-
-Thanks
-------
-
-[Bruna Borges](https://www.behance.net/bubaborges) for the sample app layout.
+Check the sample for more details.
 
 
-Contact
--------
+## Contact
 
 [Igor Morais](http://igormorais.com)
 
 
-License
--------
+## License
 
 ```
 Copyright 2014 Igor Morais

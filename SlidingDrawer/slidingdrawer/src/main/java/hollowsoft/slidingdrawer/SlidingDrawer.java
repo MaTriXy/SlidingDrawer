@@ -24,8 +24,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Message;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.util.AttributeSet;
@@ -87,8 +85,6 @@ public class SlidingDrawer extends ViewGroup {
 
     private static final int ANIMATION_FRAME_DURATION = 1000 / 60;
 
-    private static final int MESSAGE_ANIMATE = 1000;
-
     private static final int DRAWER_EXPANDED = 501;
     private static final int DRAWER_COLLAPSED = 502;
 
@@ -105,7 +101,6 @@ public class SlidingDrawer extends ViewGroup {
     private float animationVelocity;
     private float animationPosition;
     private long animationLastTime;
-    private long animationCurrentTime;
     private int touchDelta;
 
     private VelocityTracker velocityTracker;
@@ -140,8 +135,6 @@ public class SlidingDrawer extends ViewGroup {
     private OnDrawerCloseListener onDrawerCloseListener;
     private OnDrawerScrollListener onDrawerScrollListener;
 
-    private final SlidingHandler handler = new SlidingHandler();
-
     /**
      * Creates a new SlidingDrawer from a specified set of attributes defined in XML.
      *
@@ -164,7 +157,7 @@ public class SlidingDrawer extends ViewGroup {
     public SlidingDrawer(final Context context, final AttributeSet attributeSet, final int defStyleAttr) {
         super(context, attributeSet, defStyleAttr);
 
-        getStyleable(context, attributeSet, defStyleAttr, 0);
+        loadStyleable(context, attributeSet, defStyleAttr, 0);
     }
 
     /**
@@ -181,14 +174,13 @@ public class SlidingDrawer extends ViewGroup {
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public SlidingDrawer(final Context context, final AttributeSet attributeSet, final int defStyleAttr, final int defStyleRes) {
-
         super(context, attributeSet, defStyleAttr, defStyleRes);
 
-        getStyleable(context, attributeSet, defStyleAttr, defStyleRes);
+        loadStyleable(context, attributeSet, defStyleAttr, defStyleRes);
     }
 
-    private void getStyleable(final Context context, final AttributeSet attributeSet, final int defStyleAttr,
-                              final int defStyleRes) {
+    private void loadStyleable(final Context context, final AttributeSet attributeSet, final int defStyleAttr,
+                               final int defStyleRes) {
 
         final TypedArray typedArray = context.obtainStyledAttributes(attributeSet,
                                                                      R.styleable.SlidingDrawer,
@@ -228,8 +220,6 @@ public class SlidingDrawer extends ViewGroup {
         maxMajorVelocity = (int) (MAX_MAJOR_VELOCITY * density + 0.5f);
         maxAcceleration = (int) (MAX_ACCELERATION * density + 0.5f);
         velocityUnits = (int) (VELOCITY_UNITS * density + 0.5f);
-
-        setAlwaysDrawnWithCacheEnabled(false);
     }
 
     @Override
@@ -242,7 +232,7 @@ public class SlidingDrawer extends ViewGroup {
             throw new IllegalArgumentException("The handle attribute is must refer to an existing child.");
         }
 
-        viewHandle.setOnClickListener(new DrawerToggler());
+        viewHandle.setOnClickListener(new DrawerToggle());
 
         viewContent = findViewById(contentId);
 
@@ -263,7 +253,7 @@ public class SlidingDrawer extends ViewGroup {
         final int heightSpecSize =  MeasureSpec.getSize(heightMeasureSpec);
 
         if (widthSpecMode == MeasureSpec.UNSPECIFIED || heightSpecMode == MeasureSpec.UNSPECIFIED) {
-            throw new RuntimeException("The SlidingDrawer cannot have unspecified dimensions.");
+            throw new IllegalStateException("The Drawer cannot have unspecified dimensions.");
         }
 
         measureChild(viewHandle, widthMeasureSpec, heightMeasureSpec);
@@ -335,9 +325,9 @@ public class SlidingDrawer extends ViewGroup {
 
         if (tracking || animating) {
 
-            final Bitmap drawingCache = viewContent.getDrawingCache();
+            final Bitmap bitmap = viewContent.getDrawingCache();
 
-            if (drawingCache == null) {
+            if (bitmap == null) {
 
                 canvas.save();
 
@@ -351,14 +341,15 @@ public class SlidingDrawer extends ViewGroup {
             } else {
 
                 if (vertical) {
-                    canvas.drawBitmap(drawingCache, 0, viewHandle.getBottom(), null);
+                    canvas.drawBitmap(bitmap, 0, viewHandle.getBottom(), null);
 
                 } else {
-                    canvas.drawBitmap(drawingCache, viewHandle.getRight(), 0, null);
+                    canvas.drawBitmap(bitmap, viewHandle.getRight(), 0, null);
                 }
             }
 
         } else if (expanded) {
+
             drawChild(canvas, viewContent, drawingTime);
         }
     }
@@ -432,12 +423,14 @@ public class SlidingDrawer extends ViewGroup {
             switch (action) {
 
                 case MotionEvent.ACTION_MOVE:
+
                     moveHandle((int) (vertical ? event.getY() : event.getX()) - touchDelta);
 
                     break;
 
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
+
                     velocityTracker.computeCurrentVelocity(velocityUnits);
 
                     float xVelocity = velocityTracker.getXVelocity();
@@ -446,6 +439,7 @@ public class SlidingDrawer extends ViewGroup {
                     boolean negative;
 
                     if (vertical) {
+
                         negative = yVelocity < 0;
 
                         if (xVelocity < 0) {
@@ -457,6 +451,7 @@ public class SlidingDrawer extends ViewGroup {
                         }
 
                     } else {
+
                         negative = xVelocity < 0;
 
                         if (yVelocity < 0) {
@@ -469,6 +464,7 @@ public class SlidingDrawer extends ViewGroup {
                     }
 
                     float velocity = (float) Math.hypot(xVelocity, yVelocity);
+
                     if (negative) {
                         velocity = -velocity;
                     }
@@ -482,6 +478,7 @@ public class SlidingDrawer extends ViewGroup {
                                        (expanded && left < tapThreshold + topOffset) || (!expanded && left > bottomOffset + getRight() - getLeft() - handleWidth - tapThreshold)) {
 
                             if (allowSingleTap) {
+
                                 playSoundEffect(SoundEffectConstants.CLICK);
 
                                 if (expanded) {
@@ -492,14 +489,17 @@ public class SlidingDrawer extends ViewGroup {
                                 }
 
                             } else {
+
                                 performFling(vertical ? top : left, velocity, false);
                             }
 
                         } else {
+
                             performFling(vertical ? top : left, velocity, false);
                         }
 
                     } else {
+
                         performFling(vertical ? top : left, velocity, false);
                     }
 
@@ -533,7 +533,7 @@ public class SlidingDrawer extends ViewGroup {
             if (animating) {
                 animating = false;
 
-                handler.removeMessages(MESSAGE_ANIMATE);
+                removeCallbacks(handler);
             }
 
             moveHandle(position);
@@ -548,12 +548,9 @@ public class SlidingDrawer extends ViewGroup {
 
             animating = true;
 
-            handler.removeMessages(MESSAGE_ANIMATE);
+            removeCallbacks(handler);
 
-            final long now = SystemClock.uptimeMillis();
-
-            animationLastTime = now;
-            animationCurrentTime = now + ANIMATION_FRAME_DURATION;
+            animationLastTime = SystemClock.uptimeMillis();
 
             animating = true;
         }
@@ -618,17 +615,13 @@ public class SlidingDrawer extends ViewGroup {
             }
         }
 
-        final long now = SystemClock.uptimeMillis();
-
-        animationLastTime = now;
-        animationCurrentTime = now + ANIMATION_FRAME_DURATION;
+        animationLastTime = SystemClock.uptimeMillis();
 
         animating = true;
 
-        handler.removeMessages(MESSAGE_ANIMATE);
+        removeCallbacks(handler);
 
-        handler.sendMessageAtTime(handler.obtainMessage(MESSAGE_ANIMATE),
-                                  animationCurrentTime);
+        postDelayed(handler, ANIMATION_FRAME_DURATION);
 
         stopTracking();
     }
@@ -669,10 +662,7 @@ public class SlidingDrawer extends ViewGroup {
 
                 moveHandle((int) animationPosition);
 
-                animationCurrentTime += ANIMATION_FRAME_DURATION;
-
-                handler.sendMessageAtTime(handler.obtainMessage(MESSAGE_ANIMATE),
-                                          animationCurrentTime);
+                postDelayed(handler, ANIMATION_FRAME_DURATION);
             }
         }
     }
@@ -1065,7 +1055,16 @@ public class SlidingDrawer extends ViewGroup {
         this.onDrawerScrollListener = onDrawerScrollListener;
     }
 
-    private class DrawerToggler implements OnClickListener {
+    private final Runnable handler = new Runnable() {
+
+        @Override
+        public void run() {
+
+            doAnimation();
+        }
+    };
+
+    private class DrawerToggle implements OnClickListener {
 
         @Override
         public void onClick(final View view) {
@@ -1078,18 +1077,6 @@ public class SlidingDrawer extends ViewGroup {
                 } else {
                     toggle();
                 }
-            }
-        }
-    }
-
-    private class SlidingHandler extends Handler {
-
-        @Override
-        public void handleMessage(final Message message) {
-
-            if (message.what == MESSAGE_ANIMATE) {
-
-                doAnimation();
             }
         }
     }
